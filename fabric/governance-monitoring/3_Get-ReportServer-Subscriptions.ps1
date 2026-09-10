@@ -39,7 +39,7 @@
     .\3_Get-ReportServer-Subscriptions.ps1 `
         -ReportServerUrl 'https://reports.bc.com/reports' `
         -Credential (Get-Credential) `
-        -InternalDomains 'bc.com','boisecascade.com'
+        -InternalDomains 'bc.com','abc.com'
 
 .NOTES
     The script reads delivery settings defensively (it pivots whatever parameter

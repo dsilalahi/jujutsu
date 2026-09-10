@@ -40,7 +40,7 @@
     # Delegated (interactive) sign-in as a Fabric admin, scoped to two workspaces
     .\2_Get-PBI-SubscriptionInventory-REST.ps1 `
         -WorkspaceNameLike 'Finance*','*Lakehouse*' `
-        -InternalDomains 'bc.com','boisecascade.com'
+        -InternalDomains 'bc.com','abc.com'
 
 .EXAMPLE
     # Service principal
