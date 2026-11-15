@@ -61,6 +61,7 @@
           </div>
         </div>
         <ol id="skus"></ol>
+        <p class="note price-note">1-year reserved list price, East US. Confirm on <a href="https://azure.microsoft.com/en-us/pricing/details/microsoft-fabric/" target="_blank">Azure Fabric pricing</a>.</p>
         <p class="note foot"><strong>This is the model-token cost only</strong>. Queries the agent runs against a warehouse, lakehouse, or semantic model consume more capacity. Copilot and Data Agent work is a background operation, smoothed over 24 hours, and it shares the SKU with reports, refreshes, and pipelines. 100% means the whole capacity is spoken for. Confirm rates on <a href="https://learn.microsoft.com/en-us/fabric/fundamentals/copilot-fabric-consumption" target="_blank">Copilot consumption</a> and <a href="https://learn.microsoft.com/en-us/fabric/fundamentals/data-agent-consumption" target="_blank">Data agent consumption</a> before you size a purchase.</p>
       </section>
     </div>
@@ -118,7 +119,7 @@
         const pct = (daily / budget) * 100;
         const fits = pct <= 100;
         if (fits && !smallest) smallest = sku[0];
-        return { id: sku[0], cus: sku[1], budget: budget, pct: pct, holds: Math.floor(budget / CU), fits: fits, band: band(pct) };
+        return { id: sku[0], cus: sku[1], budget: budget, pct: pct, holds: Math.floor(budget / CU), fits: fits, band: band(pct), price: Math.round(sku[1] * 938 / 12) };
       });
 
       document.getElementById("fit-line").textContent = smallest
@@ -132,13 +133,14 @@
         li.className = "sku" + (marked ? " fit" : "");
         const width = Math.max(0, Math.min(row.pct, 100));
         li.innerHTML =
-          '<div class="row"><div><span class="sku-name"></span><span class="cus"></span>' +
+          '<div class="row"><div><span class="sku-name"></span><span class="cus"></span><span class="price"></span>' +
           (marked ? '<span class="pill fit">Smallest fit</span>' : "") +
           '</div><div><span class="pct"></span><span class="band"></span></div></div>' +
           '<div class="track" role="meter"><div class="fill"></div></div>' +
           '<p class="meta"></p>';
         li.querySelector(".sku-name").textContent = row.id;
         li.querySelector(".cus").textContent = row.cus + " CU";
+        li.querySelector(".price").textContent = "$" + fmt(row.price) + "/mo";
         li.querySelector(".pct").textContent = pctText(row.pct);
         const badge = li.querySelector(".band");
         badge.textContent = BAND[row.band];
@@ -190,13 +192,14 @@
         const pct = (daily / (sku[1] * DAY)) * 100;
         const fits = pct <= 100;
         if (fits && !smallest) smallest = sku[0];
-        lines.push(sku[0] + "  " + pctText(pct) + "  " + (fits ? "fits" : "over"));
+        lines.push(sku[0] + "  " + pctText(pct) + "  " + (fits ? "fits" : "over") + "  $" + fmt(Math.round(sku[1] * 938 / 12)) + "/mo reserved");
       });
       lines.push("");
       lines.push(smallest
         ? "Smallest SKU that fits this AI load alone: " + smallest
         : "Even F128 is over capacity for this AI load alone.");
       lines.push("LLM tokens only. Queries against warehouse, lakehouse, or semantic models are extra.");
+      lines.push("Prices are East US 1-year reserved list rates.");
       const text = lines.join("\n");
       try { await navigator.clipboard.writeText(text); }
       catch (err) {

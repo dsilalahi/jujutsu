@@ -181,6 +181,7 @@ li.sku.fit { border-color: var(--accent); }
 .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem; align-items: baseline; }
 .sku-name { font-family: var(--serif); font-size: 1.45rem; }
 .cus { color: var(--muted); font-size: 0.88rem; margin-left: 0.4rem; }
+.price { color: var(--muted); font-size: 0.82rem; margin-left: 0.55rem; font-variant-numeric: tabular-nums; font-weight: 550; }
 .pill {
   display: inline-block;
   border-radius: 999px;
@@ -203,6 +204,7 @@ li.sku.fit { border-color: var(--accent); }
 .fill.tight { background: var(--hot); }
 .fill.over { background: var(--over); }
 .meta { margin: 0.45rem 0 0; color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.price-note { margin: 0.55rem 0 0; }
 
 .split { display: grid; gap: 0.4rem; margin: 0.8rem 0 1rem; }
 .split-row { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.88rem; }

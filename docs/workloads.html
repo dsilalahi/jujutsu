@@ -154,6 +154,7 @@
         </div>
 
         <ol id="skus" style="margin-top:1rem"></ol>
+        <p class="note price-note">1-year reserved list price, East US. Confirm on <a href="https://azure.microsoft.com/en-us/pricing/details/microsoft-fabric/" target="_blank">Azure Fabric pricing</a>.</p>
 
         <div class="card accent-card" style="margin-top:1rem">
           <h2>How this is calculated</h2>
@@ -262,7 +263,7 @@
         const fits = pct <= 100;
         if (fits && !smallest) smallest = sku[0];
         if (fits && !recommended && pct <= 70) recommended = sku[0];
-        return { id: sku[0], cus: sku[1], budget: budget, pct: pct, fits: fits, band: band(pct) };
+        return { id: sku[0], cus: sku[1], budget: budget, pct: pct, fits: fits, band: band(pct), price: Math.round(sku[1] * 938 / 12) };
       });
 
       document.getElementById("fit-line").textContent = smallest
@@ -278,13 +279,14 @@
         const marked = row.id === (recommended || smallest) && c.sized > 0;
         li.className = "sku" + (marked ? " fit" : "");
         li.innerHTML =
-          '<div class="row"><div><span class="sku-name"></span><span class="cus"></span>' +
+          '<div class="row"><div><span class="sku-name"></span><span class="cus"></span><span class="price"></span>' +
           (marked ? '<span class="pill">Suggested</span>' : "") +
           '</div><div><span class="pct"></span><span class="band"></span></div></div>' +
           '<div class="track" role="meter"><div class="fill"></div></div>' +
           '<p class="meta"></p>';
         li.querySelector(".sku-name").textContent = row.id;
         li.querySelector(".cus").textContent = row.cus + " CU";
+        li.querySelector(".price").textContent = "$" + fmt(row.price) + "/mo";
         li.querySelector(".pct").textContent = pctText(row.pct);
         const badge = li.querySelector(".band");
         badge.textContent = BAND[row.band];
@@ -321,13 +323,14 @@
       SKUS.forEach(function (sku) {
         const pct = (c.sized / (sku[1] * DAY)) * 100;
         if (pct <= 100 && !smallest) smallest = sku[0];
-        lines.push(sku[0] + "  " + pctText(pct) + "  " + (pct <= 100 ? "fits" : "over"));
+        lines.push(sku[0] + "  " + pctText(pct) + "  " + (pct <= 100 ? "fits" : "over") + "  $" + fmt(Math.round(sku[1] * 938 / 12)) + "/mo reserved");
       });
       lines.push("");
       lines.push(smallest
         ? "Smallest SKU that fits after headroom: " + smallest
         : "Even F256 is over capacity after headroom.");
       lines.push("Spark, warehouse, and copy rates are published. Report query and refresh rates are heuristics. OneLake storage is separate.");
+      lines.push("Prices are East US 1-year reserved list rates.");
       const text = lines.join("\n");
       try { await navigator.clipboard.writeText(text); }
       catch (err) {
