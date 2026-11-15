@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fabric workload capacity planner</title>
+  <meta name="description" content="Guesstimate Fabric capacity units across reports, Spark, warehouse, pipelines, and Copilot for migration planning." />
+  <style>
+    :root {
+      --paper: #f3efe6;
+      --sheet: #fbf8f2;
+      --ink: #1a2330;
+      --muted: #5e6a78;
+      --line: #ddd4c4;
+      --accent: #0f6e78;
+      --accent-ink: #f4fffe;
+      --ok: #1f6b4a;
+      --ok-bg: #e5f4ec;
+      --warn: #8a5a12;
+      --warn-bg: #f8efd8;
+      --hot: #9a3412;
+      --hot-bg: #fde8d8;
+      --over: #9b1c1c;
+      --over-bg: #f8e4e2;
+      --sans: "Segoe UI", "Liberation Sans", sans-serif;
+      --serif: "Palatino Linotype", "Liberation Serif", Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--paper); color: var(--ink); }
+    body { font-family: var(--sans); line-height: 1.5; }
+    button, [role="button"] { cursor: pointer; }
+    button, input { font: inherit; color: inherit; }
+    a { color: var(--accent); }
+    .wrap { max-width: 72rem; margin: 0 auto; padding: 2rem 1rem 3rem; }
+    .kicker { margin: 0; font-size: 0.75rem; font-weight: 650; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+    h1 { margin: 0.4rem 0 0; font-family: var(--serif); font-size: clamp(2rem, 5vw, 3rem); font-weight: 600; line-height: 1.15; }
+    .lede { max-width: 46rem; color: var(--muted); }
+    .layout { display: grid; gap: 1.5rem; margin-top: 1.75rem; }
+    @media (min-width: 980px) {
+      .layout { grid-template-columns: 1.05fr 0.95fr; align-items: start; }
+    }
+    .card { background: var(--sheet); border: 1px solid var(--line); border-radius: 1rem; padding: 1.15rem 1.2rem; }
+    .accent-card { border-left: 4px solid var(--accent); }
+    h2 { margin: 0; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; }
+    .grid { display: grid; gap: 0.75rem 1rem; margin-top: 0.8rem; }
+    @media (min-width: 640px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+    label { display: block; font-size: 0.88rem; font-weight: 600; }
+    .hint { margin: 0.1rem 0 0.35rem; color: var(--muted); font-size: 0.76rem; }
+    input[type="number"] {
+      width: 100%; height: 2.7rem; border: 1px solid var(--line); background: var(--paper);
+      border-radius: 0.7rem; padding: 0 0.7rem; font-variant-numeric: tabular-nums;
+    }
+    input[type="number"]:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.9rem; }
+    .stats dt { color: var(--muted); font-size: 0.75rem; }
+    .stats dd { margin: 0; font-family: var(--serif); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+    ul.assume { margin: 0.6rem 0 0; padding-left: 1.1rem; color: var(--muted); font-size: 0.88rem; }
+    .note { color: var(--muted); font-size: 0.86rem; }
+    .toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; align-items: flex-end; margin-bottom: 0.8rem; }
+    .btn { display: inline-flex; align-items: center; height: 2.6rem; padding: 0 1rem; border-radius: 999px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); font-size: 0.9rem; }
+    ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
+    li.sku { background: var(--sheet); border: 1px solid var(--line); border-radius: 1rem; padding: 0.9rem 1rem; }
+    li.sku.fit { border-color: var(--accent); }
+    .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem; align-items: baseline; }
+    .sku-name { font-family: var(--serif); font-size: 1.3rem; }
+    .cus { color: var(--muted); font-size: 0.85rem; margin-left: 0.35rem; }
+    .pill { display: inline-block; border-radius: 999px; padding: 0.1rem 0.5rem; font-size: 0.7rem; font-weight: 650; margin-left: 0.4rem; background: var(--accent); color: var(--accent-ink); }
+    .pct { font-family: var(--serif); font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+    .band { border-radius: 999px; padding: 0.1rem 0.5rem; font-size: 0.7rem; font-weight: 650; margin-left: 0.35rem; }
+    .room { background: var(--ok-bg); color: var(--ok); }
+    .busy { background: var(--warn-bg); color: var(--warn); }
+    .tight { background: var(--hot-bg); color: var(--hot); }
+    .over { background: var(--over-bg); color: var(--over); }
+    .track { margin-top: 0.55rem; height: 0.45rem; background: var(--paper); border-radius: 999px; overflow: hidden; }
+    .fill { height: 100%; border-radius: 999px; width: 0; }
+    .fill.room { background: var(--ok); }
+    .fill.busy { background: var(--warn); }
+    .fill.tight { background: var(--hot); }
+    .fill.over { background: var(--over); }
+    .meta { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+    .split { display: grid; gap: 0.4rem; margin: 0.8rem 0 1rem; }
+    .split-row { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.88rem; }
+    .split-row span:last-child { font-variant-numeric: tabular-nums; }
+    .stack { display: grid; gap: 1rem; }
+    .work-title { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; }
+    .work-cu { font-family: var(--serif); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+    @media (prefers-reduced-motion: no-preference) {
+      .fill { transition: width 200ms ease; }
+    }
+  </style>
+</head>
+<body data-page="workloads">
+  <script src="nav.js"></script>
+  <main class="wrap">
+    <p class="kicker">Fabric planning</p>
+    <h1>End-to-end capacity guesstimate</h1>
+    <p class="lede"><strong>NOTE: For sizing purposes.</strong> Add the workloads that will share one capacity. Official conversion rates are used where Microsoft publishes them. Heuristics are labeled. Confirm against a pilot in the Capacity Metrics app before you buy.</p>
+
+    <div class="layout">
+      <section class="stack">
+        <div class="card">
+          <div class="work-title">
+            <h2>Reports and models</h2>
+            <span class="work-cu" id="pbi-cu">0</span>
+          </div>
+          <div class="grid two">
+            <div>
+              <label for="pbi-users">Report users</label>
+              <p class="hint">People opening Power BI reports</p>
+              <input id="pbi-users" type="number" min="0" value="80" />
+            </div>
+            <div>
+              <label for="pbi-queries">Queries per user per day</label>
+              <p class="hint">Visual interactions, roughly</p>
+              <input id="pbi-queries" type="number" min="0" value="25" />
+            </div>
+            <div>
+              <label for="pbi-per">CU-seconds per query</label>
+              <p class="hint">Heuristic. Simple visual ~1, heavy DAX 5–20</p>
+              <input id="pbi-per" type="number" min="0" step="0.1" value="2" />
+            </div>
+            <div>
+              <label for="refreshes">Model refreshes per day</label>
+              <p class="hint">Import or scheduled semantic model refreshes</p>
+              <input id="refreshes" type="number" min="0" value="8" />
+            </div>
+            <div>
+              <label for="refresh-cu">CU-seconds per refresh</label>
+              <p class="hint">Heuristic. Small model ~100, large 500+</p>
+              <input id="refresh-cu" type="number" min="0" value="400" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="work-title">
+            <h2>Spark notebooks and jobs</h2>
+            <span class="work-cu" id="spark-cu">0</span>
+          </div>
+          <div class="grid two">
+            <div>
+              <label for="spark-jobs">Job runs per day</label>
+              <p class="hint">Notebooks, Spark job definitions</p>
+              <input id="spark-jobs" type="number" min="0" value="6" />
+            </div>
+            <div>
+              <label for="spark-vcores">Average Spark vCores</label>
+              <p class="hint">Official: 2 Spark vCores = 1 CU</p>
+              <input id="spark-vcores" type="number" min="0" value="8" />
+            </div>
+            <div>
+              <label for="spark-min">Average minutes per run</label>
+              <p class="hint">Wall-clock while the job is allocated</p>
+              <input id="spark-min" type="number" min="0" value="25" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="work-title">
+            <h2>Warehouse and SQL endpoint</h2>
+            <span class="work-cu" id="wh-cu">0</span>
+          </div>
+          <div class="grid two">
+            <div>
+              <label for="wh-cores">Average active cores</label>
+              <p class="hint">Official: 1 warehouse core = 0.538 CU</p>
+              <input id="wh-cores" type="number" min="0" step="0.1" value="4" />
+            </div>
+            <div>
+              <label for="wh-hours">Active hours per day</label>
+              <p class="hint">Hours the warehouse is doing work</p>
+              <input id="wh-hours" type="number" min="0" step="0.5" value="6" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="work-title">
+            <h2>Pipelines</h2>
+            <span class="work-cu" id="pipe-cu">0</span>
+          </div>
+          <div class="grid two">
+            <div>
+              <label for="copy-runs">Copy activity runs per day</label>
+              <p class="hint">Data movement runs</p>
+              <input id="copy-runs" type="number" min="0" value="4" />
+            </div>
+            <div>
+              <label for="copy-units">Throughput units</label>
+              <p class="hint">Intelligent optimization units used</p>
+              <input id="copy-units" type="number" min="0" value="1" />
+            </div>
+            <div>
+              <label for="copy-hours">Hours per copy run</label>
+              <p class="hint">Official: 1.5 CU hours per unit-hour</p>
+              <input id="copy-hours" type="number" min="0" step="0.1" value="0.5" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="work-title">
+            <h2>Copilot and Data Agents</h2>
+            <span class="work-cu" id="ai-cu">0</span>
+          </div>
+          <div class="grid two">
+            <div>
+              <label for="ai-requests">Requests per day</label>
+              <p class="hint">Total, not per user. Or use the <a href="./">capacity planner</a></p>
+              <input id="ai-requests" type="number" min="0" value="0" />
+            </div>
+          </div>
+          <p class="note" style="margin-top:0.6rem">Fixed at 400 CU-seconds per request (2,000 input + 500 output tokens).</p>
+        </div>
+      </section>
+
+      <section>
+        <div class="toolbar">
+          <div>
+            <h2>Share of daily capacity</h2>
+            <p class="note" id="fit-line"></p>
+          </div>
+          <button type="button" class="btn" id="copy">Copy summary</button>
+        </div>
+
+        <div class="card">
+          <dl class="stats">
+            <div><dt>CU-seconds / day</dt><dd id="daily">0</dd></div>
+            <div><dt>With headroom</dt><dd id="sized">0</dd></div>
+          </dl>
+          <div class="split" id="split"></div>
+          <label for="headroom">Headroom <span id="head-label">30%</span></label>
+          <p class="hint">Extra room for growth, peaks, and optimization misses</p>
+          <input id="headroom" type="range" min="0" max="80" step="5" value="30" />
+        </div>
+
+        <ol id="skus" style="margin-top:1rem"></ol>
+
+        <div class="card accent-card" style="margin-top:1rem">
+          <h2>How this is calculated</h2>
+          <ul class="assume">
+            <li>Daily budget = SKU CUs × 86,400 CU-seconds</li>
+            <li>Spark: 2 vCores = 1 CU</li>
+            <li>Warehouse: 1 core = 0.538 CU</li>
+            <li>Copy: 1.5 CU hours per throughput unit-hour</li>
+            <li>Copilot: 400 CU-seconds per request</li>
+            <li>Report queries and refreshes are heuristics</li>
+          </ul>
+          <p class="note" style="margin-top:0.7rem">Background work (Spark, warehouse, pipelines, refreshes, Copilot) is smoothed over 24 hours. Interactive report queries are smoothed over 5 to 64 minutes. OneLake storage is billed per GB and is not in this total. Rates from <a href="https://learn.microsoft.com/en-us/fabric/enterprise/fabric-operations" target="_blank">Fabric operations</a> and <a href="https://learn.microsoft.com/en-us/fabric/data-factory/pricing-pipelines" target="_blank">pipeline pricing</a>.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const DAY = 86400;
+    const SKUS = [
+      ["F2", 2], ["F4", 4], ["F8", 8], ["F16", 16],
+      ["F32", 32], ["F64", 64], ["F128", 128], ["F256", 256]
+    ];
+    const BAND = { room: "Comfortable", busy: "Material", tight: "Near full", over: "Over capacity" };
+
+    const ids = [
+      "pbi-users", "pbi-queries", "pbi-per", "refreshes", "refresh-cu",
+      "spark-jobs", "spark-vcores", "spark-min",
+      "wh-cores", "wh-hours",
+      "copy-runs", "copy-units", "copy-hours",
+      "ai-requests", "headroom"
+    ];
+    const el = {};
+    ids.forEach(function (id) { el[id] = document.getElementById(id); });
+
+    function num(id) {
+      const n = Number(el[id].value);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+    function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+    function pctText(pct) {
+      if (pct > 0 && pct < 0.1) return "<0.1%";
+      if (pct > 100 && pct < 1000) return pct.toFixed(1) + "%";
+      if (pct >= 1000) return Math.round(pct).toLocaleString("en-US") + "%";
+      return pct.toFixed(1) + "%";
+    }
+    function band(pct) {
+      if (pct > 100) return "over";
+      if (pct > 80) return "tight";
+      if (pct > 30) return "busy";
+      return "room";
+    }
+
+    function calc() {
+      const pbiInteractive = num("pbi-users") * num("pbi-queries") * num("pbi-per");
+      const pbiRefresh = num("refreshes") * num("refresh-cu");
+      const spark = num("spark-jobs") * (num("spark-vcores") / 2) * num("spark-min") * 60;
+      const warehouse = num("wh-cores") * 0.538 * num("wh-hours") * 3600;
+      const pipelines = num("copy-runs") * num("copy-units") * num("copy-hours") * 1.5 * 3600;
+      const ai = num("ai-requests") * 400;
+      const parts = [
+        { name: "Report queries", value: pbiInteractive, kind: "Interactive" },
+        { name: "Model refreshes", value: pbiRefresh, kind: "Background" },
+        { name: "Spark", value: spark, kind: "Background" },
+        { name: "Warehouse", value: warehouse, kind: "Background" },
+        { name: "Pipelines", value: pipelines, kind: "Background" },
+        { name: "Copilot / agents", value: ai, kind: "Background" }
+      ];
+      const daily = parts.reduce(function (sum, p) { return sum + p.value; }, 0);
+      const head = num("headroom") / 100;
+      const sized = daily * (1 + head);
+      const interactive = pbiInteractive;
+      const background = daily - interactive;
+      return { parts: parts, daily: daily, sized: sized, interactive: interactive, background: background, head: head };
+    }
+
+    function render() {
+      const c = calc();
+      document.getElementById("pbi-cu").textContent = fmt(c.parts[0].value + c.parts[1].value);
+      document.getElementById("spark-cu").textContent = fmt(c.parts[2].value);
+      document.getElementById("wh-cu").textContent = fmt(c.parts[3].value);
+      document.getElementById("pipe-cu").textContent = fmt(c.parts[4].value);
+      document.getElementById("ai-cu").textContent = fmt(c.parts[5].value);
+      document.getElementById("daily").textContent = fmt(c.daily);
+      document.getElementById("sized").textContent = fmt(c.sized);
+      document.getElementById("head-label").textContent = Math.round(c.head * 100) + "%";
+
+      const split = document.getElementById("split");
+      split.replaceChildren();
+      [
+        ["Interactive", c.interactive],
+        ["Background", c.background]
+      ].concat(c.parts.map(function (p) { return [p.name, p.value]; })).forEach(function (row) {
+        const div = document.createElement("div");
+        div.className = "split-row";
+        div.innerHTML = "<span></span><span></span>";
+        div.firstChild.textContent = row[0];
+        div.lastChild.textContent = fmt(row[1]) + " CU-s";
+        split.appendChild(div);
+      });
+
+      let smallest = null;
+      let recommended = null;
+      const rows = SKUS.map(function (sku) {
+        const budget = sku[1] * DAY;
+        const pct = (c.sized / budget) * 100;
+        const fits = pct <= 100;
+        if (fits && !smallest) smallest = sku[0];
+        if (fits && !recommended && pct <= 70) recommended = sku[0];
+        return { id: sku[0], cus: sku[1], budget: budget, pct: pct, fits: fits, band: band(pct) };
+      });
+
+      document.getElementById("fit-line").textContent = smallest
+        ? (recommended && recommended !== smallest
+            ? smallest + " holds this load. " + recommended + " keeps it under 70% after headroom."
+            : smallest + " is the smallest SKU that holds this load after headroom.")
+        : "Even F256 is over capacity after headroom.";
+
+      const list = document.getElementById("skus");
+      list.replaceChildren();
+      rows.forEach(function (row) {
+        const li = document.createElement("li");
+        const marked = row.id === (recommended || smallest) && c.sized > 0;
+        li.className = "sku" + (marked ? " fit" : "");
+        li.innerHTML =
+          '<div class="row"><div><span class="sku-name"></span><span class="cus"></span>' +
+          (marked ? '<span class="pill">Suggested</span>' : "") +
+          '</div><div><span class="pct"></span><span class="band"></span></div></div>' +
+          '<div class="track" role="meter"><div class="fill"></div></div>' +
+          '<p class="meta"></p>';
+        li.querySelector(".sku-name").textContent = row.id;
+        li.querySelector(".cus").textContent = row.cus + " CU";
+        li.querySelector(".pct").textContent = pctText(row.pct);
+        const badge = li.querySelector(".band");
+        badge.textContent = BAND[row.band];
+        badge.classList.add(row.band);
+        const fill = li.querySelector(".fill");
+        fill.classList.add(row.band);
+        fill.style.width = Math.max(0, Math.min(row.pct, 100)) + "%";
+        li.querySelector(".track").setAttribute("aria-label", row.id + " uses " + pctText(row.pct) + " after headroom");
+        li.querySelector(".meta").textContent = "Budget " + fmt(row.budget) + " CU-seconds/day";
+        list.appendChild(li);
+      });
+    }
+
+    ids.forEach(function (id) {
+      el[id].addEventListener("input", render);
+    });
+
+    document.getElementById("copy").addEventListener("click", async function () {
+      const c = calc();
+      const lines = [
+        "Fabric end-to-end capacity guesstimate",
+        "Daily CU-seconds: " + fmt(c.daily),
+        "Headroom: " + Math.round(c.head * 100) + "%",
+        "Sized CU-seconds: " + fmt(c.sized),
+        "",
+        "By workload:"
+      ];
+      c.parts.forEach(function (p) {
+        lines.push(p.name + " (" + p.kind + "): " + fmt(p.value));
+      });
+      lines.push("");
+      lines.push("Share of each SKU after headroom:");
+      let smallest = null;
+      SKUS.forEach(function (sku) {
+        const pct = (c.sized / (sku[1] * DAY)) * 100;
+        if (pct <= 100 && !smallest) smallest = sku[0];
+        lines.push(sku[0] + "  " + pctText(pct) + "  " + (pct <= 100 ? "fits" : "over"));
+      });
+      lines.push("");
+      lines.push(smallest
+        ? "Smallest SKU that fits after headroom: " + smallest
+        : "Even F256 is over capacity after headroom.");
+      lines.push("Spark, warehouse, and copy rates are published. Report query and refresh rates are heuristics. OneLake storage is separate.");
+      const text = lines.join("\n");
+      try { await navigator.clipboard.writeText(text); }
+      catch (err) {
+        const area = document.createElement("textarea");
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand("copy");
+        area.remove();
+      }
+      const btn = document.getElementById("copy");
+      btn.textContent = "Copied";
+      setTimeout(function () { btn.textContent = "Copy summary"; }, 1600);
+    });
+
+    render();
+  </script>
+  <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "a39a55a293044466ad2233b0552613f7"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

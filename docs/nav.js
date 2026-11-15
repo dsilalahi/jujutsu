@@ -6,7 +6,8 @@
    href is relative to docs/. "./" is this site's home page. */
 (function () {
   var pages = [
-    { id: "cu", href: "./", label: "Capacity planner" }
+    { id: "cu", href: "./", label: "Capacity planner" },
+    { id: "workloads", href: "./workloads.html", label: "Workload planner" }
   ];
 
   var style = document.createElement("style");
