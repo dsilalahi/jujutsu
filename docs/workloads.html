@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Fabric workload capacity planner</title>
-  <meta name="description" content="Guesstimate Fabric capacity units across reports, Spark, warehouse, pipelines, and Copilot for migration planning." />
+  <meta name="description" content="Guesstimate Fabric capacity units across reports, Spark, warehouse, pipelines, Real-Time Intelligence, and Copilot for migration planning." />
   <link rel="stylesheet" href="site.css" />
 </head>
 <body data-page="workloads">
@@ -117,6 +117,75 @@
           </div>
         </div>
 
+
+        <div class="card">
+          <div class="work-title">
+            <h2>Real-Time Intelligence</h2>
+            <span class="work-cu" id="rti-cu">0</span>
+          </div>
+
+          <h3 style="margin:0.2rem 0 0.5rem; font-size:0.95rem;">Eventstream</h3>
+          <div class="grid two">
+            <div>
+              <label for="es-streams">Eventstreams</label>
+              <p class="hint">Active streams. 0.222 CU hours each per hour</p>
+              <input id="es-streams" type="number" min="0" value="0" />
+            </div>
+            <div>
+              <label for="es-hours">Active hours per day</label>
+              <p class="hint">Hours with traffic in or out</p>
+              <input id="es-hours" type="number" min="0" step="0.5" value="24" />
+            </div>
+            <div>
+              <label for="es-gb">Daily data traffic (GB)</label>
+              <p class="hint">Ingress plus egress. 0.342 CU hours per GB</p>
+              <input id="es-gb" type="number" min="0" step="0.1" value="0" />
+            </div>
+            <div>
+              <label for="es-connectors">Source connectors</label>
+              <p class="hint">0.611 CU hours per vCore-hour. Event Hubs and IoT Hub are free</p>
+              <input id="es-connectors" type="number" min="0" value="0" />
+            </div>
+          </div>
+          <label style="display:flex; align-items:center; gap:0.45rem; margin-top:0.6rem;">
+            <input id="es-processor" type="checkbox" checked style="width:auto; height:auto;" />
+            Include processor (destinations or transforms, from 0.778 CU hours per hour)
+          </label>
+
+          <h3 style="margin:1rem 0 0.5rem; font-size:0.95rem;">Eventhouse</h3>
+          <div class="grid two">
+            <div>
+              <label for="eh-cores">Average cores</label>
+              <p class="hint">Eventhouse UpTime: 1 core-hour = 1 CU hour</p>
+              <input id="eh-cores" type="number" min="0" step="0.5" value="0" />
+            </div>
+            <div>
+              <label for="eh-hours">Active hours per day</label>
+              <p class="hint">Always-on is 24. Default minimum is 2 CUs when scheduled</p>
+              <input id="eh-hours" type="number" min="0" step="0.5" value="24" />
+            </div>
+          </div>
+
+          <h3 style="margin:1rem 0 0.5rem; font-size:0.95rem;">Activator</h3>
+          <div class="grid two">
+            <div>
+              <label for="act-rules">Alert rules</label>
+              <p class="hint">Each rule keeps a listener: 0.0222 CU hours per hour</p>
+              <input id="act-rules" type="number" min="0" value="0" />
+            </div>
+            <div>
+              <label for="act-hours">Listener hours per day</label>
+              <p class="hint">Hours the rules stay active</p>
+              <input id="act-hours" type="number" min="0" step="0.5" value="24" />
+            </div>
+            <div>
+              <label for="act-events">Events evaluated per day</label>
+              <p class="hint">0.000011111 CU hours per event operation</p>
+              <input id="act-events" type="number" min="0" value="0" />
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="work-title">
             <h2>Copilot and Data Agents</h2>
@@ -163,10 +232,13 @@
             <li>Spark: 2 vCores = 1 CU</li>
             <li>Warehouse: 1 core = 0.538 CU</li>
             <li>Copy: 1.5 CU hours per throughput unit-hour</li>
+            <li>Eventstream: 0.222 CU hours per stream-hour, 0.342 per GB, processor from 0.778, connectors 0.611 per vCore-hour</li>
+            <li>Eventhouse: 1 core-hour = 1 CU hour</li>
+            <li>Activator: 0.0222 CU hours per rule-hour plus 0.000011111 CU hours per event</li>
             <li>Copilot: 400 CU-seconds per request</li>
             <li>Report queries and refreshes are heuristics</li>
           </ul>
-          <p class="note" style="margin-top:0.7rem">Background work (Spark, warehouse, pipelines, refreshes, Copilot) is smoothed over 24 hours. Interactive report queries are smoothed over 5 to 64 minutes. OneLake storage is billed per GB and is not in this total. Rates from <a href="https://learn.microsoft.com/en-us/fabric/enterprise/fabric-operations" target="_blank">Fabric operations</a> and <a href="https://learn.microsoft.com/en-us/fabric/data-factory/pricing-pipelines" target="_blank">pipeline pricing</a>.</p>
+          <p class="note" style="margin-top:0.7rem">Background work (Spark, warehouse, pipelines, refreshes, Real-Time Intelligence, Copilot) is smoothed over 24 hours. Interactive report queries are smoothed over 5 to 64 minutes. OneLake and Eventhouse storage are billed per GB and are not in this total. Rates from <a href="https://learn.microsoft.com/en-us/fabric/enterprise/fabric-operations" target="_blank">Fabric operations</a>, <a href="https://learn.microsoft.com/en-us/fabric/data-factory/pricing-pipelines" target="_blank">pipeline pricing</a>, and <a href="https://learn.microsoft.com/en-us/fabric/real-time-intelligence/event-streams/monitor-capacity-consumption" target="_blank">Eventstream consumption</a>.</p>
         </div>
       </section>
     </div>
@@ -184,6 +256,9 @@
       "spark-jobs", "spark-vcores", "spark-min",
       "wh-cores", "wh-hours",
       "copy-runs", "copy-units", "copy-hours",
+      "es-streams", "es-hours", "es-gb", "es-connectors",
+      "eh-cores", "eh-hours",
+      "act-rules", "act-hours", "act-events",
       "ai-requests", "headroom"
     ];
     const el = {};
@@ -213,6 +288,13 @@
       const spark = num("spark-jobs") * (num("spark-vcores") / 2) * num("spark-min") * 60;
       const warehouse = num("wh-cores") * 0.538 * num("wh-hours") * 3600;
       const pipelines = num("copy-runs") * num("copy-units") * num("copy-hours") * 1.5 * 3600;
+      const esBase = num("es-streams") * num("es-hours") * 0.222 * 3600;
+      const esTraffic = num("es-gb") * 0.342 * 3600;
+      const esProcessor = (document.getElementById("es-processor").checked ? num("es-streams") * num("es-hours") * 0.778 * 3600 : 0);
+      const esConnectors = num("es-connectors") * num("es-hours") * 0.611 * 3600;
+      const eventstream = esBase + esTraffic + esProcessor + esConnectors;
+      const eventhouse = num("eh-cores") * num("eh-hours") * 3600;
+      const activator = num("act-rules") * num("act-hours") * 0.0222 * 3600 + num("act-events") * 0.000011111 * 3600;
       const ai = num("ai-requests") * 400;
       const parts = [
         { name: "Report queries", value: pbiInteractive, kind: "Interactive" },
@@ -220,6 +302,9 @@
         { name: "Spark", value: spark, kind: "Background" },
         { name: "Warehouse", value: warehouse, kind: "Background" },
         { name: "Pipelines", value: pipelines, kind: "Background" },
+        { name: "Eventstream", value: eventstream, kind: "Background" },
+        { name: "Eventhouse", value: eventhouse, kind: "Background" },
+        { name: "Activator", value: activator, kind: "Background" },
         { name: "Copilot / agents", value: ai, kind: "Background" }
       ];
       const daily = parts.reduce(function (sum, p) { return sum + p.value; }, 0);
@@ -236,7 +321,8 @@
       document.getElementById("spark-cu").textContent = fmt(c.parts[2].value);
       document.getElementById("wh-cu").textContent = fmt(c.parts[3].value);
       document.getElementById("pipe-cu").textContent = fmt(c.parts[4].value);
-      document.getElementById("ai-cu").textContent = fmt(c.parts[5].value);
+      document.getElementById("rti-cu").textContent = fmt(c.parts[5].value + c.parts[6].value + c.parts[7].value);
+      document.getElementById("ai-cu").textContent = fmt(c.parts[8].value);
       document.getElementById("daily").textContent = fmt(c.daily);
       document.getElementById("sized").textContent = fmt(c.sized);
       document.getElementById("head-label").textContent = Math.round(c.head * 100) + "%";
@@ -302,6 +388,7 @@
     ids.forEach(function (id) {
       el[id].addEventListener("input", render);
     });
+    document.getElementById("es-processor").addEventListener("change", render);
 
     document.getElementById("copy").addEventListener("click", async function () {
       const c = calc();
@@ -328,7 +415,7 @@
       lines.push(smallest
         ? "Smallest SKU that fits after headroom: " + smallest
         : "Even F256 is over capacity after headroom.");
-      lines.push("Spark, warehouse, and copy rates are published. Report query and refresh rates are heuristics. OneLake storage is separate.");
+      lines.push("Spark, warehouse, copy, Eventstream, Eventhouse, and Activator rates are published. Report query and refresh rates are heuristics. OneLake and Eventhouse storage are separate.");
       lines.push("Prices are East US 1-year reserved list rates.");
       const text = lines.join("\n");
       try { await navigator.clipboard.writeText(text); }
