@@ -180,8 +180,7 @@ li.sku { background: var(--sheet); border: 1px solid var(--line); border-radius:
 li.sku.fit { border-color: var(--accent); }
 .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem; align-items: baseline; }
 .sku-name { font-family: var(--serif); font-size: 1.45rem; }
-.cus { color: var(--muted); font-size: 0.88rem; margin-left: 0.4rem; }
-.price { color: var(--muted); font-size: 0.82rem; margin-left: 0.55rem; font-variant-numeric: tabular-nums; font-weight: 550; }
+.price { color: var(--muted); font-size: 0.88rem; margin-left: 0.4rem; font-variant-numeric: tabular-nums; }
 .pill {
   display: inline-block;
   border-radius: 999px;
@@ -231,7 +230,7 @@ li.sku.fit { border-color: var(--accent); }
 [data-page="workloads"] .btn { height: 2.6rem; }
 [data-page="workloads"] li.sku { padding: 0.9rem 1rem; }
 [data-page="workloads"] .sku-name { font-size: 1.3rem; }
-[data-page="workloads"] .cus { font-size: 0.85rem; margin-left: 0.35rem; }
+[data-page="workloads"] .price { font-size: 0.85rem; margin-left: 0.35rem; }
 [data-page="workloads"] .pill { background: var(--accent); color: var(--accent-ink); font-size: 0.7rem; margin-left: 0.4rem; }
 [data-page="workloads"] .pct { font-size: 1.3rem; }
 [data-page="workloads"] .band { font-size: 0.7rem; margin-left: 0.35rem; }

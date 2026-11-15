@@ -133,13 +133,12 @@
         li.className = "sku" + (marked ? " fit" : "");
         const width = Math.max(0, Math.min(row.pct, 100));
         li.innerHTML =
-          '<div class="row"><div><span class="sku-name"></span><span class="cus"></span><span class="price"></span>' +
+          '<div class="row"><div><span class="sku-name"></span><span class="price"></span>' +
           (marked ? '<span class="pill fit">Smallest fit</span>' : "") +
           '</div><div><span class="pct"></span><span class="band"></span></div></div>' +
           '<div class="track" role="meter"><div class="fill"></div></div>' +
           '<p class="meta"></p>';
         li.querySelector(".sku-name").textContent = row.id;
-        li.querySelector(".cus").textContent = row.cus + " CU";
         li.querySelector(".price").textContent = "$" + fmt(row.price) + "/mo";
         li.querySelector(".pct").textContent = pctText(row.pct);
         const badge = li.querySelector(".band");
