@@ -36,10 +36,11 @@
           </select>
 
           <label for="size">Largest database size</label>
+          <p class="hint">Hyperscale (Azure SQL Database) supports single databases up to 128 TB</p>
           <select id="size">
             <option value="small">Under 1 TB</option>
             <option value="mid" selected>1–4 TB</option>
-            <option value="large">Over 4 TB</option>
+            <option value="large">Over 4 TB (consider Hyperscale)</option>
           </select>
 
           <label for="sa">Software Assurance or license mobility?</label>
@@ -66,7 +67,7 @@
         <div class="card accent-card" style="margin-top:1rem">
           <h2>Estimation notes</h2>
           <ul class="assume">
-            <li>Azure Hybrid Benefit + reservations can reduce cost substantially versus pay-as-you-go (Microsoft cites up to ~85% in some scenarios when combined with other savings).</li>
+            <li>Azure Hybrid Benefit + reservations can reduce cost substantially versus pay-as-you-go on eligible tiers. Hyperscale has no SQL software license fee, so Hybrid Benefit does not apply to new Hyperscale databases.</li>
             <li>PaaS options (Database, Managed Instance) usually lower operational cost; VM keeps more of the current admin model.</li>
             <li>Use Azure Migrate or the Azure pricing calculator for numbers based on your actual CPU, memory, storage, and region.</li>
           </ul>
@@ -99,7 +100,7 @@
             <li>Pilot one non-critical database, validate performance and features, then plan the cutover window.</li>
             <li>After migration, review reserved capacity and right-sizing once you have real usage data.</li>
           </ol>
-          <p class="note foot">Official starting points: <a href="https://learn.microsoft.com/en-us/data-migration/sql-server/overview" target="_blank">Migrate from SQL Server overview</a>, <a href="https://learn.microsoft.com/en-us/azure/azure-sql/migration-guides/migration-overview" target="_blank">Azure SQL migration overview</a>, <a href="https://azure.microsoft.com/products/azure-migrate/" target="_blank">Azure Migrate</a>.</p>
+          <p class="note foot">Official starting points: <a href="https://learn.microsoft.com/en-us/data-migration/sql-server/overview" target="_blank">Migrate from SQL Server overview</a>, <a href="https://learn.microsoft.com/en-us/azure/azure-sql/migration-guides/migration-overview" target="_blank">Azure SQL migration overview</a>, <a href="https://learn.microsoft.com/en-us/azure/azure-sql/database/service-tier-hyperscale" target="_blank">Hyperscale service tier</a>, <a href="https://azure.microsoft.com/products/azure-migrate/" target="_blank">Azure Migrate</a>.</p>
         </div>
       </section>
     </div>
@@ -112,10 +113,10 @@
         name: "Azure SQL Database",
         model: "PaaS · database-scoped",
         effort: "Higher (possible app changes)",
-        when: "Single logical databases, cloud-native or modern apps, variable load, minimal admin.",
-        pros: ["Lowest management", "Built-in HA, backups, patching", "Serverless and elastic pools", "Hyperscale for large single DBs"],
-        cons: ["No full SQL Agent", "Limited cross-database and instance features", "No OS access"],
-        migrate: "Offline tools (DMS, BACPAC, ADF) are common. Online options exist but are more constrained."
+        when: "Single logical databases, cloud-native or modern apps, variable load, or large single DBs (Hyperscale up to 128 TB).",
+        pros: ["Lowest management", "Built-in HA, backups, patching", "Serverless and elastic pools", "Hyperscale for large DBs: up to 128 TB, nearly instant snapshot backups, independent storage scale"],
+        cons: ["No full SQL Agent", "Limited cross-database and instance features", "No OS access", "Hybrid Benefit does not apply to new Hyperscale databases"],
+        migrate: "Offline tools (DMS, BACPAC, ADF) are common. Online options exist but are more constrained. Convert existing Azure SQL Database tiers to Hyperscale; reverse move has a time window."
       },
       {
         id: "mi",
@@ -152,18 +153,23 @@
       if (os === "yes") {
         primary = "vm";
         why = "OS or custom software requirements point to SQL Server on an Azure VM.";
-      } else if (features === "none" && size !== "large") {
+      } else if (features === "none" && size === "large") {
         primary = "db";
-        why = "Database-level features and moderate size fit Azure SQL Database well, with the lowest management overhead.";
+        why = "A large single database with mostly database-level features is a strong fit for Azure SQL Database Hyperscale (up to 128 TB, nearly instant backups).";
+      } else if (features === "none") {
+        primary = "db";
+        why = "Database-level features and moderate size fit Azure SQL Database well, with the lowest management overhead. Use Hyperscale if the database is expected to grow large.";
       } else if (features === "heavy") {
         primary = "mi";
         why = "Heavy instance-feature use is a strong fit for Managed Instance. Review any remaining gaps against a VM if needed.";
       } else if (size === "large") {
         primary = "mi";
-        why = "Larger databases are commonly placed on Managed Instance (or a VM). Confirm storage and performance limits for the target tier.";
+        why = "Larger databases that need instance features are commonly placed on Managed Instance. If the database is a single logical DB with limited instance dependencies, consider Azure SQL Database Hyperscale instead.";
       }
 
-      if (sa === "yes" && primary !== "vm") {
+      if (sa === "yes" && primary === "db" && size === "large") {
+        why += " Note: Hybrid Benefit does not apply to new Hyperscale databases.";
+      } else if (sa === "yes" && primary !== "vm") {
         why += " Software Assurance opens Azure Hybrid Benefit on this option.";
       }
       if (downtime === "low" && primary === "mi") {
