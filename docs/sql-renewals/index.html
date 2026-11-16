@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SQL Renewals — Azure options</title>
+  <meta name="description" content="High-level guidance for customers moving on-premises SQL Server databases to Azure. Compare Azure SQL Database, Managed Instance, and SQL on VMs, with next steps and estimation notes." />
+  <link rel="stylesheet" href="../site.css" />
+</head>
+<body data-page="sql">
+  <script src="../nav.js"></script>
+  <main class="wrap">
+    <p class="kicker">SQL renewals</p>
+    <h1>From on-prem SQL Server to Azure</h1>
+    <p class="lede"><strong>NOTE: For guidance and sizing conversations.</strong> A short path through the three main Azure targets, what usually drives the choice, and practical next steps. Not a formal assessment or quote.</p>
+
+    <div class="layout">
+      <section>
+        <div class="card">
+          <h2>Your situation</h2>
+          <p class="hint">Answer a few questions. The recommendation updates as you go.</p>
+
+          <label for="features">Instance features you rely on</label>
+          <p class="hint">SQL Agent, cross-database queries, CLR, linked servers, Database Mail</p>
+          <select id="features">
+            <option value="none">Mostly database-level only</option>
+            <option value="some" selected>Some instance features (Agent, cross-DB, etc.)</option>
+            <option value="heavy">Heavy use of instance features or custom extensions</option>
+          </select>
+
+          <label for="os">Need OS or custom software on the server?</label>
+          <p class="hint">Third-party tools, specific Windows settings, file system access</p>
+          <select id="os">
+            <option value="no" selected>No — managed platform is fine</option>
+            <option value="yes">Yes — we need OS or install-level control</option>
+          </select>
+
+          <label for="size">Largest database size</label>
+          <select id="size">
+            <option value="small">Under 1 TB</option>
+            <option value="mid" selected>1–4 TB</option>
+            <option value="large">Over 4 TB</option>
+          </select>
+
+          <label for="sa">Software Assurance or license mobility?</label>
+          <p class="hint">Enables Azure Hybrid Benefit on Azure SQL options</p>
+          <select id="sa">
+            <option value="yes" selected>Yes — we have SA</option>
+            <option value="no">No or not sure</option>
+          </select>
+
+          <label for="downtime">Acceptable downtime for cutover</label>
+          <select id="downtime">
+            <option value="low">Minimal (near-zero preferred)</option>
+            <option value="medium" selected>A few hours is fine</option>
+            <option value="high">Planned outage of a day or more is OK</option>
+          </select>
+
+          <dl class="stats" style="margin-top:1rem">
+            <div><dt>Primary recommendation</dt><dd id="rec-name">—</dd></div>
+            <div><dt>Effort level</dt><dd id="rec-effort">—</dd></div>
+          </dl>
+          <p class="note" id="rec-why" style="margin-top:0.6rem"></p>
+        </div>
+
+        <div class="card accent-card" style="margin-top:1rem">
+          <h2>Estimation notes</h2>
+          <ul class="assume">
+            <li>Azure Hybrid Benefit + reservations can reduce cost substantially versus pay-as-you-go (Microsoft cites up to ~85% in some scenarios when combined with other savings).</li>
+            <li>PaaS options (Database, Managed Instance) usually lower operational cost; VM keeps more of the current admin model.</li>
+            <li>Use Azure Migrate or the Azure pricing calculator for numbers based on your actual CPU, memory, storage, and region.</li>
+          </ul>
+          <p class="note" style="margin-top:0.7rem">These are directional. Confirm current rates and eligibility on <a href="https://azure.microsoft.com/pricing/details/azure-sql-database/" target="_blank">Azure SQL pricing</a> and <a href="https://azure.microsoft.com/pricing/hybrid-benefit/" target="_blank">Azure Hybrid Benefit</a>.</p>
+        </div>
+      </section>
+
+      <section>
+        <div class="toolbar">
+          <div>
+            <h2>Options at a glance</h2>
+            <p class="note" id="fit-line">Adjust the inputs to highlight the strongest fit.</p>
+          </div>
+        </div>
+        <ol id="options" class="stack"></ol>
+
+        <div class="card" style="margin-top:1rem">
+          <h2>Suggested next steps</h2>
+          <ol class="assume" style="padding-left:1.2rem">
+            <li>Run <strong>Azure Migrate</strong> (or the SQL assessment in SSMS / Azure Arc) to inventory instances, feature use, and sizing.</li>
+            <li>Group databases that must move together (shared jobs, cross-DB queries, linked servers).</li>
+            <li>Confirm Software Assurance status and Hybrid Benefit eligibility.</li>
+            <li>Pick a migration method for the target:
+              <ul>
+                <li>Managed Instance → Managed Instance link (near-zero downtime) or Azure DMS / log replay</li>
+                <li>Azure SQL Database → DMS offline, BACPAC, or data movement tools (more app changes possible)</li>
+                <li>SQL on VM → backup/restore, log shipping, or distributed availability groups</li>
+              </ul>
+            </li>
+            <li>Pilot one non-critical database, validate performance and features, then plan the cutover window.</li>
+            <li>After migration, review reserved capacity and right-sizing once you have real usage data.</li>
+          </ol>
+          <p class="note foot">Official starting points: <a href="https://learn.microsoft.com/en-us/data-migration/sql-server/overview" target="_blank">Migrate from SQL Server overview</a>, <a href="https://learn.microsoft.com/en-us/azure/azure-sql/migration-guides/migration-overview" target="_blank">Azure SQL migration overview</a>, <a href="https://azure.microsoft.com/products/azure-migrate/" target="_blank">Azure Migrate</a>.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const OPTIONS = [
+      {
+        id: "db",
+        name: "Azure SQL Database",
+        model: "PaaS · database-scoped",
+        effort: "Higher (possible app changes)",
+        when: "Single logical databases, cloud-native or modern apps, variable load, minimal admin.",
+        pros: ["Lowest management", "Built-in HA, backups, patching", "Serverless and elastic pools", "Hyperscale for large single DBs"],
+        cons: ["No full SQL Agent", "Limited cross-database and instance features", "No OS access"],
+        migrate: "Offline tools (DMS, BACPAC, ADF) are common. Online options exist but are more constrained."
+      },
+      {
+        id: "mi",
+        name: "Azure SQL Managed Instance",
+        model: "PaaS · instance-scoped",
+        effort: "Low to medium",
+        when: "Most lift-and-shift migrations that need SQL Agent, cross-database queries, or other instance features without OS access.",
+        pros: ["Near-full SQL Server compatibility", "SQL Agent, cross-DB, CLR support", "Private networking", "Managed HA and backups"],
+        cons: ["Higher cost than single Database in some cases", "Some feature differences remain", "Storage and size limits apply"],
+        migrate: "Managed Instance link for near-zero downtime; Azure DMS or log replay also available."
+      },
+      {
+        id: "vm",
+        name: "SQL Server on Azure VM",
+        model: "IaaS · full control",
+        effort: "Lowest migration, highest ongoing ops",
+        when: "You need OS access, specific SQL version control, FileStream/FileTable, or software installed on the same machine.",
+        pros: ["Full engine and OS parity", "Any supported SQL version", "Familiar HA/DR models (AGs, FCIs)", "Bring-your-own license options"],
+        cons: ["You own patching, backups, and HA", "Idle VMs still cost money", "More operational work"],
+        migrate: "Backup/restore, log shipping, or distributed availability groups. Planned downtime is usually required."
+      }
+    ];
+
+    function recommend() {
+      const features = document.getElementById("features").value;
+      const os = document.getElementById("os").value;
+      const size = document.getElementById("size").value;
+      const sa = document.getElementById("sa").value;
+      const downtime = document.getElementById("downtime").value;
+
+      let primary = "mi";
+      let why = "Managed Instance is the usual starting point for existing SQL Server workloads that use instance features.";
+
+      if (os === "yes") {
+        primary = "vm";
+        why = "OS or custom software requirements point to SQL Server on an Azure VM.";
+      } else if (features === "none" && size !== "large") {
+        primary = "db";
+        why = "Database-level features and moderate size fit Azure SQL Database well, with the lowest management overhead.";
+      } else if (features === "heavy") {
+        primary = "mi";
+        why = "Heavy instance-feature use is a strong fit for Managed Instance. Review any remaining gaps against a VM if needed.";
+      } else if (size === "large") {
+        primary = "mi";
+        why = "Larger databases are commonly placed on Managed Instance (or a VM). Confirm storage and performance limits for the target tier.";
+      }
+
+      if (sa === "yes" && primary !== "vm") {
+        why += " Software Assurance opens Azure Hybrid Benefit on this option.";
+      }
+      if (downtime === "low" && primary === "mi") {
+        why += " Managed Instance link is designed for minimal-downtime cutovers.";
+      }
+
+      return { primary, why };
+    }
+
+    function render() {
+      const { primary, why } = recommend();
+      const rec = OPTIONS.find(o => o.id === primary);
+      document.getElementById("rec-name").textContent = rec.name;
+      document.getElementById("rec-effort").textContent = rec.effort;
+      document.getElementById("rec-why").textContent = why;
+      document.getElementById("fit-line").textContent = rec.name + " is the strongest fit for the answers above.";
+
+      const list = document.getElementById("options");
+      list.replaceChildren();
+      OPTIONS.forEach(function (opt) {
+        const li = document.createElement("li");
+        li.className = "card" + (opt.id === primary ? " accent-card" : "");
+        li.innerHTML =
+          '<div class="row" style="display:flex;justify-content:space-between;align-items:baseline;gap:0.5rem;flex-wrap:wrap">' +
+            '<div><strong style="font-size:1.05rem"></strong> <span class="price" style="margin-left:0.4rem"></span></div>' +
+            (opt.id === primary ? '<span class="pill fit">Best fit</span>' : '') +
+          '</div>' +
+          '<p class="note" style="margin:0.35rem 0 0.6rem"></p>' +
+          '<p class="hint" style="margin:0 0 0.4rem"><strong>When to choose:</strong> </p>' +
+          '<ul class="assume" style="margin-top:0"></ul>' +
+          '<p class="note" style="margin-top:0.5rem"><strong>Migration:</strong> </p>';
+        li.querySelector("strong").textContent = opt.name;
+        li.querySelector(".price").textContent = opt.model;
+        li.querySelector("p.note").textContent = opt.when;
+        const ul = li.querySelector("ul");
+        opt.pros.forEach(function (p) {
+          const item = document.createElement("li");
+          item.textContent = p;
+          ul.appendChild(item);
+        });
+        li.querySelectorAll("p.note")[1].textContent = "Migration: " + opt.migrate;
+        list.appendChild(li);
+      });
+    }
+
+    ["features", "os", "size", "sa", "downtime"].forEach(function (id) {
+      document.getElementById(id).addEventListener("change", render);
+    });
+    render();
+  </script>
+  <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "a39a55a293044466ad2233b0552613f7"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

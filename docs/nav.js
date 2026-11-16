@@ -11,7 +11,8 @@
   var base = "/jujutsu/";
   var pages = [
     { id: "cu", href: base, label: "AI Capacity planner" },
-    { id: "workloads", href: base + "workloads/", label: "Workload planner" }
+    { id: "workloads", href: base + "workloads/", label: "Workload planner" },
+    { id: "sql", href: base + "sql-renewals/", label: "SQL Renewals" }
   ];
 
   var current = document.body.getAttribute("data-page") || "";
