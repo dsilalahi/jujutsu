@@ -23,7 +23,7 @@
   var brand = document.createElement("a");
   brand.className = "site-brand";
   brand.href = base;
-  brand.textContent = "Fabric planning";
+  brand.textContent = current === "sql" ? "SQL Renewals" : "Fabric planning";
   var nav = document.createElement("nav");
   nav.className = "site-nav";
   nav.setAttribute("aria-label", "Tools");
