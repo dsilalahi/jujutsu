@@ -1,14 +1,17 @@
 /* Shared menu for the Fabric planning site.
-   Add a tool by appending one object below, then start the new file
-   (also in docs/) with:
-     <link rel="stylesheet" href="site.css" />
+   Add a tool by appending one object below.
+   For a clean URL on GitHub Pages, put the page at docs/<id>/index.html
+   (served as /jujutsu/<id>/) and link site.css + nav.js with ../ .
+   Start the file with:
+     <link rel="stylesheet" href="../site.css" />
      <body data-page="THE_ID">
-     <script src="nav.js"></script>
-   href is relative to docs/. "./" is this site's home page. */
+     <script src="../nav.js"></script>
+   The home page stays at docs/index.html. */
 (function () {
+  var base = "/jujutsu/";
   var pages = [
-    { id: "cu", href: "./", label: "AI Capacity planner" },
-    { id: "workloads", href: "./workloads.html", label: "Workload planner" }
+    { id: "cu", href: base, label: "AI Capacity planner" },
+    { id: "workloads", href: base + "workloads/", label: "Workload planner" }
   ];
 
   var current = document.body.getAttribute("data-page") || "";
@@ -18,7 +21,7 @@
   bar.className = "site-bar";
   var brand = document.createElement("a");
   brand.className = "site-brand";
-  brand.href = "./";
+  brand.href = base;
   brand.textContent = "Fabric planning";
   var nav = document.createElement("nav");
   nav.className = "site-nav";
