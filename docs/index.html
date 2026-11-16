@@ -33,20 +33,26 @@
             <input id="requests" inputmode="numeric" autocomplete="off" value="20" />
             <button type="button" id="requests-inc" aria-label="Increase requests">+</button>
           </div>
+          <label for="input-tokens">Input tokens per request</label>
+          <p class="hint">Default 2,000. Microsoft's published example</p>
+          <input id="input-tokens" type="number" min="0" step="100" value="2000" />
+          <label for="output-tokens">Output tokens per request</label>
+          <p class="hint">Default 500. Microsoft's published example</p>
+          <input id="output-tokens" type="number" min="0" step="50" value="500" />
           <dl class="stats">
             <div><dt>Total requests / day</dt><dd id="total">0</dd></div>
+            <div><dt>CU-seconds / request</dt><dd id="cu-per">400</dd></div>
             <div><dt>CU-seconds / day</dt><dd id="daily">0</dd></div>
           </dl>
         </div>
         <div class="card accent-card" style="margin-top:1rem">
-          <h2>Fixed assumptions</h2>
+          <h2>Rates</h2>
           <ul class="assume">
-            <li>2,000 input tokens</li>
-            <li>500 output tokens</li>
-            <li>400 CU-seconds per request</li>
+            <li>Input: 100 CU-seconds per 1,000 tokens</li>
+            <li>Output: 400 CU-seconds per 1,000 tokens</li>
             <li>1 capacity unit = 86,400 CU-seconds per day</li>
           </ul>
-          <p class="note">(2,000 × 100 + 500 × 400) / 1,000 = 400. That is Microsoft's published example. Cached input (10 CU-seconds per 1,000 tokens) is not applied. An F-SKU's daily budget is its CU count times 86,400.</p>
+          <p class="note" id="formula-note">(2,000 × 100 + 500 × 400) / 1,000 = 400. That is Microsoft's published example. Cached input (10 CU-seconds per 1,000 tokens) is not applied. An F-SKU's daily budget is its CU count times 86,400.</p>
         </div>
       </section>
 
@@ -67,7 +73,6 @@
     </div>
   </main>
   <script>
-    const CU = 400;
     const DAY = 86400;
     const SKUS = [
       ["F2", 2], ["F4", 4], ["F8", 8], ["F16", 16], ["F32", 32], ["F64", 64], ["F128", 128]
@@ -81,6 +86,8 @@
 
     const usersEl = document.getElementById("users");
     const reqEl = document.getElementById("requests");
+    const inputTokensEl = document.getElementById("input-tokens");
+    const outputTokensEl = document.getElementById("output-tokens");
     const list = document.getElementById("skus");
 
     function digits(raw) {
@@ -108,10 +115,16 @@
     function render() {
       const users = count(usersEl.value);
       const perUser = count(reqEl.value);
+      const inputTokens = count(inputTokensEl.value);
+      const outputTokens = count(outputTokensEl.value);
+      const cuPer = (inputTokens * 100 + outputTokens * 400) / 1000;
       const total = users * perUser;
-      const daily = total * CU;
+      const daily = total * cuPer;
       document.getElementById("total").textContent = fmt(total);
+      document.getElementById("cu-per").textContent = fmt(cuPer);
       document.getElementById("daily").textContent = fmt(daily);
+      document.getElementById("formula-note").textContent =
+        "(" + fmt(inputTokens) + " × 100 + " + fmt(outputTokens) + " × 400) / 1,000 = " + fmt(cuPer) + ". Cached input (10 CU-seconds per 1,000 tokens) is not applied. An F-SKU's daily budget is its CU count times 86,400.";
 
       let smallest = null;
       const rows = SKUS.map(function (sku) {
@@ -119,7 +132,7 @@
         const pct = (daily / budget) * 100;
         const fits = pct <= 100;
         if (fits && !smallest) smallest = sku[0];
-        return { id: sku[0], cus: sku[1], budget: budget, pct: pct, holds: Math.floor(budget / CU), fits: fits, band: band(pct), price: Math.round(sku[1] * 938 / 12) };
+        return { id: sku[0], cus: sku[1], budget: budget, pct: pct, holds: Math.floor(budget / cuPer || 0), fits: fits, band: band(pct), price: Math.round(sku[1] * 938 / 12) };
       });
 
       document.getElementById("fit-line").textContent = smallest
@@ -170,18 +183,25 @@
     }
     bind(usersEl, "users-dec", "users-inc");
     bind(reqEl, "requests-dec", "requests-inc");
+    inputTokensEl.addEventListener("input", render);
+    outputTokensEl.addEventListener("input", render);
 
     document.getElementById("copy").addEventListener("click", async function () {
       const users = count(usersEl.value);
       const perUser = count(reqEl.value);
+      const inputTokens = count(inputTokensEl.value);
+      const outputTokens = count(outputTokensEl.value);
+      const cuPer = (inputTokens * 100 + outputTokens * 400) / 1000;
       const total = users * perUser;
-      const daily = total * CU;
+      const daily = total * cuPer;
       const lines = [
         "Fabric Copilot / Data Agent capacity guesstimate",
         "Users: " + fmt(users),
         "Requests per user per day: " + fmt(perUser),
+        "Input tokens per request: " + fmt(inputTokens),
+        "Output tokens per request: " + fmt(outputTokens),
         "Total requests per day: " + fmt(total),
-        "CU-seconds per request: 400 (2,000 input tokens + 500 output tokens)",
+        "CU-seconds per request: " + fmt(cuPer) + " (" + fmt(inputTokens) + " input × 100 + " + fmt(outputTokens) + " output × 400) / 1,000",
         "Daily CU-seconds: " + fmt(daily),
         "",
         "Share of each SKU (CU count × 86,400 CU-seconds/day):"
